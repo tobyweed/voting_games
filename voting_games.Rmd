@@ -1,0 +1,92 @@
+---
+title: "Weighted Voting Games"
+output: html_document
+date: '2022-06-17'
+---
+
+```{r}
+library(tidyverse)
+library(combinat)
+```
+
+```{r}
+# get voting data for all proposals in POH history
+# write to CSV
+# analyze CSV:
+#   - for each voter, see voting record (voter ID - proposal - vote - VP)
+#   - find voters who "consistently" (set a percentage threshold) vote the same way 
+#   - sort into voting blocks & get their (most recent?) total voting power
+```
+
+
+```{r}
+votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character"))
+```
+
+## Power Indices
+```{r}
+dist <- c(5,5,5,5,5)
+```
+
+```{r}
+# compute the gini coefficient of a given distribution
+gini <- function(dist) {
+  
+  # area between Lorenz curve and line of equality
+  num <- 0
+  for(x in dist) {
+    for(y in dist) {
+      num <- num + abs(x - y)
+    }
+  }
+  
+  # area below line of equality
+  denom <- 2*(length(dist))^2*mean(dist)
+  
+  num/denom
+}
+```
+
+```{r}
+# compute Shapley-Shubik indices for a given distribution 
+# params:
+#   - dist: a distribution of voting power per voter
+#   - thresh: the percentage of votes required to win, e.g. 0.5
+ssi <- function(dist, thresh) {
+  thresh_num <- ceiling(sum(dist)*thresh) # the number of votes required to win
+  index_perm <- permn(1:length(dist)) # all possible voting orders
+  ssis <- numeric(length(dist)) # a vector to store the S-S index for each voter
+  
+  # find the swing for each voting order
+  for(order in index_perm) {
+    tot_votes <- 0
+    i <- 1
+
+    while(tot_votes < thresh_num && i <= length(order)) { # identify the swing or determine that there is none
+      tot_votes <- tot_votes + dist[order[i]]
+      i <- i + 1
+    }
+    
+    if(tot_votes >= thresh_num) { # increment the S-S index for the correct voter if the measure passed
+      ssis[order[i - 1]] <- ssis[order[i - 1]] + 1
+    }
+  }
+  
+  ssis
+}
+```
+
+```{r}
+# calculate the S-S indices as a probability dist; proportions rather than sums
+ssi_prop <- function(dist, thresh) {
+  ssis <- ssi(dist,thresh)
+  ssis/sum(ssis)
+}
+```
+
+
+```{r}
+dist <- c(1,1,10)
+gini(ssi_prop(dist,0.5))
+```
+
