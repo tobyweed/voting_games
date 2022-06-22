@@ -18,10 +18,156 @@ library(combinat)
 #   - sort into voting blocks & get their (most recent?) total voting power
 ```
 
+```{r}
+votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number
+                                                                         #  if type is unspecified
+```
+
 
 ```{r}
-votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character"))
+# count number of votes cast per voter
+vote_counts <- votes %>%
+  group_by(Voter.ID) %>%
+  mutate(N.Votes = n())
+
+# we have 1811 individual voters
+length(unique(vote_counts$Voter.ID))
+
+# and 104 voters who cast at least 10 votes
+vote_counts %>%
+  filter(N.Votes >= 10) %>%
+  select(Voter.ID) %>%
+  unique() %>%
+  nrow()
+
+# lets focus on these repeat voters
+v1 <- vote_counts %>%
+  filter(N.Votes >= 10) 
+
+# we'll also restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
+start_time <- v1 %>%
+  filter(Proposal.ID == "0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8") %>%
+  arrange(Time.Created) %>%
+  head(1)
+ 
+start_time <- start_time$Time.Created
+v1 <- v1 %>%
+  filter(Time.Created >= start_time)
+
+# this leaves us with 74 voters and 7 proposals.
 ```
+
+
+```{r}
+# make a table with rows=voters and cols=proposals, with cell values=how they voted.
+proposals <- unique(v1$Proposal.ID)
+voters <- unique(v1$Voter.ID)
+vot_tab <- data.frame(matrix(nrow = length(voters), ncol= length(proposals)))
+colnames(vot_tab) <- proposals
+rownames(vot_tab) <- voters
+
+for(i in 1:nrow(vot_tab)) {
+  for(j in 1:ncol(vot_tab)) {
+    row <- filter(v1, Voter.ID == voters[i], Proposal.ID == proposals[j])
+    if(nrow(row) != 0) {
+      vot_tab[i,j] <- row$Choice
+    }
+  }
+}
+
+# make the cols a little nicer
+tab <- vot_tab
+colnames(tab) <- 1:length(proposals)
+rownames(tab) <- 1:length(voters)
+
+# how many missing values do we have?
+na_counts <- rowSums(is.na(tab))
+table(na_counts)
+# 4 voters voted on every proposal, 16 missed <2, 24 missed <3, 38 missed 3 or less, 55 missed 4 or less. Where should we draw the line? Maybe try imputing values and see what happens?
+
+# Note: For N two-option, single-choice proposals, you end up with at most 2^N parties (assuming you're imputing missing values, or there are none). If you can always compute S-S index for up to 16 parties, then you can always compute S-S index for voting 4 proposals. 
+
+
+# Clustering technique for two-option votes:
+#   - start with ppl who voted on all proposals. Each voting record gets a cluster/"bin" (2^N total bins)
+#   - ppl who voted on 1 less than all proposals might be added to 2 bins. Choose one randomly
+
+# Way of computing distance: 
+```
+
+
+```{r}
+# Cluster the voters into voting "blocs"
+# tab <- apply(tab, 2, as.numeric)
+tab[is.na(tab)] <- 0
+
+hc <- hclust(dist(tab, method = "binary"), method = "complete")
+
+plot(hc, main = "Complete Linkage", xlab = "", sub = "",
+     cex = 0.5)
+
+hc_clusters <- cutree(hc, 5)
+
+v2 <- v1 %>%
+  add_column(Bloc = NA)
+
+for(i in 1:length(voters)) {
+  id <- voters[i]
+  rows <- which(v2$Voter.ID == id)
+  v2$Bloc[rows] <- hc_clusters[i]
+}
+
+# count each Bloc's voting weight, using each voter's max weight
+v2 <- v2 %>%
+  group_by(Voter.ID) %>%
+  mutate(Max.Weight = max(Weight))
+
+bloc_dist <- v2 %>%
+  group_by(Bloc, Voter.ID, Max.Weight) %>%
+  nest() %>%
+  group_by(Bloc) %>%
+  summarize(Bloc.Weight = sum(Max.Weight))
+
+bloc_dist %>% ggplot(aes(x = Bloc, y = Bloc.Weight)) +
+  geom_col()
+
+ssi(bloc_dist$Bloc.Weight, 0.5)
+```
+
+
+
+
+``` {r}
+
+
+# return a df identical to "record" except adding a numeric col signifying party
+getParties <- function(record) {
+  
+}
+
+# what is the voter overlap between all proposals with these 28 voters?
+# make a matrix w proposals on rows & cols where the cells contain the number of voters the proposals have in common
+# what I would like is a 
+
+# alternative strategy to all this would just be to choose the 10 most active voters & shapley-shubik 'em...
+
+
+v1 %>% 
+  ungroup() %>%
+  select(-N.Votes) %>%
+  group_by(Proposal.ID) %>%
+  count() %>% 
+  arrange(desc(n))
+
+v2 <- v1 %>%
+  filter(!Proposal.ID %in% props$Proposal.ID)
+
+
+# now try to find the 20 voters who all voted on the same proposals?
+```
+
+
+
 
 ## Power Indices
 ```{r}
@@ -88,5 +234,63 @@ ssi_prop <- function(dist, thresh) {
 ```{r}
 dist <- c(1,1,10)
 gini(ssi_prop(dist,0.5))
+```
+
+
+
+## Scratch
+
+
+```{r scratch}
+# for each voter, establish "voting record"--will be a vector of choice numbers
+df <- tibble(x = c(1, 1, 1, 2, 2, 3), y = 1:6, z = 6:1)
+df_nested <- df %>% nest(data = c(y, z))
+
+test <- head(votes, 500)
+
+# nest the voting record
+vote_records <- votes %>%
+  group_by(Voter.ID) %>%
+  mutate(nvotes = n()) %>%
+  nest()
+
+frequent_voters <- votes %>%
+  group_by(Voter.ID) %>%
+  mutate(nvotes = n()) %>%
+  filter(nvotes >= 5) %>%
+  nest() %>%
+  rename(Record = data)
+
+fv_1 <- votes %>%
+  group_by(Voter.ID) %>%
+  mutate(nvotes = n())
+
+fv_2 <- votes %>%
+  group_by(Voter.ID) %>%
+  mutate(nvotes = n()) %>%
+  nest(Record = -c(Voter.ID,nvotes))
+
+fv_1 <- frequent_voters %>%
+  mutate(N.Votes = Record[[1]]$nvotes[[1]])
+
+# vote_records_1 <- vote_records %>% mutate(filtered = ifelse(data$nvotes > 5, TRUE, FALSE))
+#                                             map(data, ~ filter(., nvotes > 5)))
+
+
+# vote_records_1 <- test %>%
+#   group_by(Voter.ID) %>%
+#   nest() %>%
+#   rename(Record = data)
+# length(vote_records$Record[[3]])
+# vote_records %>% filter(nrow(Record) == 1)
+# vote_records %>% map(~ filter(nrow(.) > 1))
+# vote_records %>% map( ~ .)
+# map(vote_records$Record, ~ ifelse(nrow(.) > 1, print("yes"), ))
+# vote_records %>% mutate(filtered = map(Record, ~ filter(., nrow(.) > 1)))
+# vote_records %>% mutate(multi = ifelse(nrow(Record), TRUE, FALSE))
+
+# map iterates through every column
+
+# compare similarity between voters. Clustering analysis or just percentage of shared votes threshold?
 ```
 
