@@ -7,6 +7,7 @@ date: '2022-06-17'
 ```{r}
 library(tidyverse)
 library(combinat)
+library(qgraph)
 ```
 
 ```{r}
@@ -25,36 +26,36 @@ votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter
 
 
 ```{r}
-# count number of votes cast per voter
-vote_counts <- votes %>%
-  group_by(Voter.ID) %>%
-  mutate(N.Votes = n())
-
-# we have 1811 individual voters
-length(unique(vote_counts$Voter.ID))
-
-# and 104 voters who cast at least 10 votes
-vote_counts %>%
-  filter(N.Votes >= 10) %>%
-  select(Voter.ID) %>%
-  unique() %>%
-  nrow()
-
-# lets focus on these repeat voters
-v1 <- vote_counts %>%
-  filter(N.Votes >= 10) 
-
-# we'll also restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
-start_time <- v1 %>%
+# let's restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
+start_time <- votes %>%
   filter(Proposal.ID == "0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8") %>%
   arrange(Time.Created) %>%
   head(1)
  
 start_time <- start_time$Time.Created
-v1 <- v1 %>%
+v1 <- votes %>%
   filter(Time.Created >= start_time)
 
-# this leaves us with 74 voters and 7 proposals.
+# count number of votes cast per voter
+v1 <- v1 %>%
+  group_by(Voter.ID) %>%
+  mutate(N.Votes = n())
+
+length(unique(v1$Voter.ID)) # we have 658  individual voters after this time
+length(unique(v1$Proposal.ID)) # and 7 proposals
+
+# and 69 voters who cast at least 4 votes
+v1 %>%
+  filter(N.Votes >= 4) %>%
+  select(Voter.ID) %>%
+  unique() %>%
+  nrow()
+
+# lets focus on these repeat voters
+v1 <- v1 %>%
+  filter(N.Votes >= 4) 
+
+# this leaves us with 69 voters and 7 proposals.
 ```
 
 
@@ -82,30 +83,38 @@ rownames(tab) <- 1:length(voters)
 
 # how many missing values do we have?
 na_counts <- rowSums(is.na(tab))
+mean(na_counts)
 table(na_counts)
-# 4 voters voted on every proposal, 16 missed <2, 24 missed <3, 38 missed 3 or less, 55 missed 4 or less. Where should we draw the line? Maybe try imputing values and see what happens?
+# 6 voters voted on every proposal, 22 missed <2, 37 missed <3, 69 missed 3 or less. Where should we draw the line? Maybe try imputing values and see what happens?
+```
 
-# Note: For N two-option, single-choice proposals, you end up with at most 2^N parties (assuming you're imputing missing values, or there are none). If you can always compute S-S index for up to 16 parties, then you can always compute S-S index for voting 4 proposals. 
+
+## Cluster
+```{r}
+# clustering technique: replace NAs by 1/2. Hierarchically cluster using manhattan/taxicab metric. Complete, average, or single linkage?
+
+tab[is.na(tab)] <- 0.5
+
+dist <- dist(tab, method = "manhattan")
+dist_mat <- as.matrix(dist)
+
+jpeg('votegraph.jpg', width=1000, height=1000, unit='px')
+qgraph(1/dist_mat, layout='spring', vsize=3)
+dev.off()
+```
 
 
-# Clustering technique for two-option votes:
-#   - start with ppl who voted on all proposals. Each voting record gets a cluster/"bin" (2^N total bins)
-#   - ppl who voted on 1 less than all proposals might be added to 2 bins. Choose one randomly
+```{r}
+hc <- hclust(dist, method = "complete")
 
-# Way of computing distance: 
+plot(hc, main = "Complete Linkage", xlab = "", sub = "",
+     cex = 0.5)
 ```
 
 
 ```{r}
 # Cluster the voters into voting "blocs"
 # tab <- apply(tab, 2, as.numeric)
-tab[is.na(tab)] <- 0
-
-hc <- hclust(dist(tab, method = "binary"), method = "complete")
-
-plot(hc, main = "Complete Linkage", xlab = "", sub = "",
-     cex = 0.5)
-
 hc_clusters <- cutree(hc, 5)
 
 v2 <- v1 %>%
@@ -131,9 +140,18 @@ bloc_dist <- v2 %>%
 bloc_dist %>% ggplot(aes(x = Bloc, y = Bloc.Weight)) +
   geom_col()
 
-ssi(bloc_dist$Bloc.Weight, 0.5)
+bloc_dist$SSI <- ssi(bloc_dist$Bloc.Weight, 0.5)
+
+bloc_dist %>% ggplot(aes(x = Bloc, y = SSI)) +
+  geom_col()
 ```
 
+```{r}
+v2 %>%
+  filter(Bloc == 1) %>%
+  select(Voter.ID) %>%
+  unique()
+```
 
 
 
@@ -229,7 +247,6 @@ ssi_prop <- function(dist, thresh) {
   ssis/sum(ssis)
 }
 ```
-
 
 ```{r}
 dist <- c(1,1,10)
