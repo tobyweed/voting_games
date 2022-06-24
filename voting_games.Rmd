@@ -1,0 +1,210 @@
+---
+title: "Weighted Voting Games"
+output: html_document
+date: '2022-06-17'
+---
+
+```{r}
+library(tidyverse)
+library(combinat)
+library(qgraph)
+
+votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number
+                                                                         #  if type is unspecified
+```
+
+```{r}
+# get voting data for all proposals in POH history
+# write to CSV
+# analyze CSV:
+#   - for each voter, see voting record (voter ID - proposal - vote - VP)
+#   - find voters who "consistently" (set a percentage threshold) vote the same way 
+#   - sort into voting blocks & get their (most recent?) total voting power
+```
+
+## Clean the data
+```{r}
+# let's restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
+start_time <- votes %>%
+  filter(Proposal.ID == "0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8") %>%
+  arrange(Time.Created) %>%
+  head(1)
+ 
+start_time <- start_time$Time.Created
+v1 <- votes %>%
+  filter(Time.Created >= start_time)
+
+# count number of votes cast per voter
+v1 <- v1 %>%
+  group_by(Voter.ID) %>%
+  mutate(N.Votes = n())
+
+length(unique(v1$Voter.ID)) # we have 658  individual voters after this time
+length(unique(v1$Proposal.ID)) # and 7 proposals
+
+# and 69 voters who cast at least 4 votes
+v1 %>%
+  filter(N.Votes >= 4) %>%
+  select(Voter.ID) %>%
+  unique() %>%
+  nrow()
+
+# lets focus on these repeat voters
+v1 <- v1 %>%
+  filter(N.Votes >= 4) 
+```
+
+This leaves us with 69 voters and 7 proposals.
+
+
+## Calculate a voting record
+```{r}
+# make a table with rows=voters and cols=proposals, with cell values=how they voted.
+proposals <- unique(v1$Proposal.ID)
+voters <- unique(v1$Voter.ID)
+vot_tab <- data.frame(matrix(nrow = length(voters), ncol= length(proposals)))
+colnames(vot_tab) <- proposals
+rownames(vot_tab) <- voters
+
+for(i in 1:nrow(vot_tab)) {
+  for(j in 1:ncol(vot_tab)) {
+    row <- filter(v1, Voter.ID == voters[i], Proposal.ID == proposals[j])
+    if(nrow(row) != 0) {
+      vot_tab[i,j] <- row$Choice
+    }
+  }
+}
+
+# make the cols a little nicer
+tab <- vot_tab
+colnames(tab) <- 1:length(proposals)
+rownames(tab) <- 1:length(voters)
+
+# how many missing values do we have?
+na_counts <- rowSums(is.na(tab))
+mean(na_counts)
+table(na_counts)
+# 6 voters voted on every proposal, 22 missed <2, 37 missed <3, 69 missed 3 or less. Where should we draw the line? Maybe try imputing values and see what happens?
+```
+
+
+## Analyze
+```{r}
+# clustering technique: replace NAs by 1/2. Hierarchically cluster using manhattan/taxicab metric. Complete, average, or single linkage?
+
+tab[is.na(tab)] <- 0.5
+
+dist <- dist(tab, method = "manhattan")
+dist_mat <- as.matrix(dist)
+
+# Make a voting graph
+jpeg('votegraph.jpg', width=1000, height=1000, unit='px')
+qgraph(1/dist_mat, layout='spring', vsize=3)
+dev.off()
+```
+
+We'll also try clustering the voting records into "parties" or "voting blocs."
+```{r}
+hc <- hclust(dist, method = "complete")
+
+plot(hc, main = "Complete Linkage", xlab = "", sub = "",
+     cex = 0.5)
+```
+
+
+```{r}
+# Cluster the voters into voting "blocs"
+hc_clusters <- cutree(hc, 5)
+
+v2 <- v1 %>%
+  add_column(Bloc = NA)
+
+for(i in 1:length(voters)) {
+  id <- voters[i]
+  rows <- which(v2$Voter.ID == id)
+  v2$Bloc[rows] <- hc_clusters[i]
+}
+
+# count each Bloc's voting weight, using each voter's max weight
+v2 <- v2 %>%
+  group_by(Voter.ID) %>%
+  mutate(Max.Weight = max(Weight))
+
+bloc_dist <- v2 %>%
+  group_by(Bloc, Voter.ID, Max.Weight) %>%
+  nest() %>%
+  group_by(Bloc) %>%
+  summarize(Bloc.Weight = sum(Max.Weight))
+
+bloc_dist %>% ggplot(aes(x = Bloc, y = Bloc.Weight)) +
+  geom_col()
+
+bloc_dist$SSI <- ssi_prop(bloc_dist$Bloc.Weight, 0.5)
+
+bloc_dist %>% ggplot(aes(x = Bloc, y = SSI)) +
+  geom_col()
+```
+
+
+## Utilities
+```{r}
+dist <- c(5,5,5,5,5)
+```
+
+```{r}
+# compute the gini coefficient of a given distribution
+gini <- function(dist) {
+  
+  # area between Lorenz curve and line of equality
+  num <- 0
+  for(x in dist) {
+    for(y in dist) {
+      num <- num + abs(x - y)
+    }
+  }
+  
+  # area below line of equality
+  denom <- 2*(length(dist))^2*mean(dist)
+  
+  num/denom
+}
+```
+
+```{r}
+# compute Shapley-Shubik indices for a given distribution 
+# params:
+#   - dist: a distribution of voting power per voter
+#   - thresh: the percentage of votes required to win, e.g. 0.5
+ssi <- function(dist, thresh) {
+  thresh_num <- ceiling(sum(dist)*thresh) # the number of votes required to win
+  index_perm <- permn(1:length(dist)) # all possible voting orders
+  ssis <- numeric(length(dist)) # a vector to store the S-S index for each voter
+  
+  # find the swing for each voting order
+  for(order in index_perm) {
+    tot_votes <- 0
+    i <- 1
+
+    while(tot_votes < thresh_num && i <= length(order)) { # identify the swing or determine that there is none
+      tot_votes <- tot_votes + dist[order[i]]
+      i <- i + 1
+    }
+    
+    if(tot_votes >= thresh_num) { # increment the S-S index for the correct voter if the measure passed
+      ssis[order[i - 1]] <- ssis[order[i - 1]] + 1
+    }
+  }
+  
+  ssis
+}
+```
+
+```{r}
+# calculate the S-S indices as a probability dist; proportions rather than sums
+ssi_prop <- function(dist, thresh) {
+  ssis <- ssi(dist,thresh)
+  ssis/sum(ssis)
+}
+```
+
+

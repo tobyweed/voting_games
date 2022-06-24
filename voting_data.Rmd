@@ -1,0 +1,167 @@
+---
+title: "voting_data"
+output: html_document
+date: '2022-06-21'
+---
+
+```{r}
+library(ghql)
+library(jsonlite)
+library(dplyr)
+```
+
+## Setup
+```{r}
+snapshot_endpt <- 'https://hub.snapshot.org/graphql'
+conn <- GraphqlClient$new(url = snapshot_endpt)
+```
+
+```{r querystrings}
+# query for finding votes in a proposal
+vote_query <- '
+query ($nvotes: Int!, $proposal: String!) {
+  votes (
+    first: $nvotes
+    skip: 0
+    where: {
+      proposal: $proposal
+    }
+    orderBy: "created",
+    orderDirection: desc
+  ) {
+    id
+    voter
+    vp
+    created
+    proposal {
+      id
+    }
+    choice
+    space {
+      id
+    }
+  }
+}'
+
+# query for finding proposals in a space
+prop_query <- 'query ($nprops: Int!, $space: String!)  {
+  proposals (
+    first: $nprops,
+    skip: 0,
+    where: {
+      space_in: [$space],
+      state: "closed"
+    },
+    orderBy: "created",
+    orderDirection: desc
+  ) {
+    id
+    title
+    body
+    choices
+    start
+    end
+    snapshot
+    state
+    author
+    space {
+      id
+      name
+    }
+  }
+}'
+```
+
+## Collect Voting Data
+
+```{r getdata}
+proposal_df <- getProps(prop_query, 1000, "poh.eth")
+prop_ids <- proposal_df$data.proposals.id  # get list of proposal IDs
+
+# store all the votes from every proposal in a big list
+votes_list <- list() # DF to store all the votes gathered
+for(i in 1:length(prop_ids)) {
+  votes <- getVotes(vote_query, 1000, prop_ids[i])
+  votes_list[[i]] <- votes
+}
+```
+
+```{r processdata}
+# use only elements with single-choice voting (causes problems with dplyr::bind_row() and don't know how to process later anyways)
+votes_list_singlechoice <- list()
+for(df in votes_list) {
+  if(typeof(df$data.votes.choice) == "integer") {
+    votes_list_singlechoice[[length(votes_list_singlechoice) + 1]] <- df
+  }
+}
+
+# gather the data into one big dataframe
+votes_df <- bind_rows(votes_list_singlechoice)
+
+# remove problematic nested object cols and rename cols
+votes_df$Proposal.ID <- votes_df$`data.votes.proposal`$id
+votes_df$Space.ID <- votes_df$`data.votes.space`$id
+votes_df <- votes_df %>% select(-c(data.votes.proposal, data.votes.space))
+votes_df <- votes_df %>%
+  rename(ID = data.votes.id,
+         Voter.ID = data.votes.voter,
+         Weight = data.votes.vp,
+         Time.Created = data.votes.created,
+         Choice = data.votes.choice)
+
+# write csv
+write.csv(votes_df, "votes.csv", row.names = FALSE)
+```
+
+
+## Utility Functions
+
+```{r queryfunctions}
+# get the proposals from a Snapshot space
+# params:
+#   - query: GraphQL query string
+#   - nprops: max number of props to return
+#   - space: the name of the space to be queried
+# returns: DF of proposals
+getProps <- function(query, nprops, space) {
+  new <- Query$new()$query('q', query) # init query object
+  
+  params <- list( # init params list
+    nprops = nprops,
+    space = space
+  )
+  
+  # execute the request & convert from JSON to list
+  result <- conn$exec(new$q, variables = params) %>%
+    fromJSON(flatten = F)
+  
+  result_df <- as.data.frame(result) # convert list to DF
+  result_df
+}
+
+
+# get the votes for a particular proposal
+# params:
+#   - query: GraphQL query string
+#   - nvotes: max number of votes to return
+#   - proposal: the ID/address of the proposal to be gotten. Can be found at the end of the snapshot URL
+# returns: DF of votes
+getVotes <- function(query, nvotes, proposal) {
+  new <- Query$new()$query('q', query) # init query object
+  
+  params <- list( # init params list
+    nvotes = nvotes,
+    proposal = proposal
+  )
+  
+  # execute the request & convert from JSON to list
+  result <- conn$exec(new$q, variables = params) %>%
+    fromJSON(flatten = F)
+  
+  result_df <- as.data.frame(result) # convert list to DF
+  result_df
+}
+```
+
+
+
