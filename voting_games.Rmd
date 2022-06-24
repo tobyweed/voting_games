@@ -8,6 +8,9 @@ date: '2022-06-17'
 library(tidyverse)
 library(combinat)
 library(qgraph)
+
+votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number
+                                                                         #  if type is unspecified
 ```
 
 ```{r}
@@ -19,12 +22,7 @@ library(qgraph)
 #   - sort into voting blocks & get their (most recent?) total voting power
 ```
 
-```{r}
-votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number
-                                                                         #  if type is unspecified
-```
-
-
+## Clean the data
 ```{r}
 # let's restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
 start_time <- votes %>%
@@ -54,11 +52,12 @@ v1 %>%
 # lets focus on these repeat voters
 v1 <- v1 %>%
   filter(N.Votes >= 4) 
-
-# this leaves us with 69 voters and 7 proposals.
 ```
 
+This leaves us with 69 voters and 7 proposals.
 
+
+## Calculate a voting record
 ```{r}
 # make a table with rows=voters and cols=proposals, with cell values=how they voted.
 proposals <- unique(v1$Proposal.ID)
@@ -89,7 +88,7 @@ table(na_counts)
 ```
 
 
-## Cluster
+## Analyze
 ```{r}
 # clustering technique: replace NAs by 1/2. Hierarchically cluster using manhattan/taxicab metric. Complete, average, or single linkage?
 
@@ -98,12 +97,13 @@ tab[is.na(tab)] <- 0.5
 dist <- dist(tab, method = "manhattan")
 dist_mat <- as.matrix(dist)
 
+# Make a voting graph
 jpeg('votegraph.jpg', width=1000, height=1000, unit='px')
 qgraph(1/dist_mat, layout='spring', vsize=3)
 dev.off()
 ```
 
-
+We'll also try clustering the voting records into "parties" or "voting blocs."
 ```{r}
 hc <- hclust(dist, method = "complete")
 
@@ -114,7 +114,6 @@ plot(hc, main = "Complete Linkage", xlab = "", sub = "",
 
 ```{r}
 # Cluster the voters into voting "blocs"
-# tab <- apply(tab, 2, as.numeric)
 hc_clusters <- cutree(hc, 5)
 
 v2 <- v1 %>%
@@ -140,54 +139,14 @@ bloc_dist <- v2 %>%
 bloc_dist %>% ggplot(aes(x = Bloc, y = Bloc.Weight)) +
   geom_col()
 
-bloc_dist$SSI <- ssi(bloc_dist$Bloc.Weight, 0.5)
+bloc_dist$SSI <- ssi_prop(bloc_dist$Bloc.Weight, 0.5)
 
 bloc_dist %>% ggplot(aes(x = Bloc, y = SSI)) +
   geom_col()
 ```
 
-```{r}
-v2 %>%
-  filter(Bloc == 1) %>%
-  select(Voter.ID) %>%
-  unique()
-```
 
-
-
-``` {r}
-
-
-# return a df identical to "record" except adding a numeric col signifying party
-getParties <- function(record) {
-  
-}
-
-# what is the voter overlap between all proposals with these 28 voters?
-# make a matrix w proposals on rows & cols where the cells contain the number of voters the proposals have in common
-# what I would like is a 
-
-# alternative strategy to all this would just be to choose the 10 most active voters & shapley-shubik 'em...
-
-
-v1 %>% 
-  ungroup() %>%
-  select(-N.Votes) %>%
-  group_by(Proposal.ID) %>%
-  count() %>% 
-  arrange(desc(n))
-
-v2 <- v1 %>%
-  filter(!Proposal.ID %in% props$Proposal.ID)
-
-
-# now try to find the 20 voters who all voted on the same proposals?
-```
-
-
-
-
-## Power Indices
+## Utilities
 ```{r}
 dist <- c(5,5,5,5,5)
 ```
@@ -248,66 +207,4 @@ ssi_prop <- function(dist, thresh) {
 }
 ```
 
-```{r}
-dist <- c(1,1,10)
-gini(ssi_prop(dist,0.5))
-```
-
-
-
-## Scratch
-
-
-```{r scratch}
-# for each voter, establish "voting record"--will be a vector of choice numbers
-df <- tibble(x = c(1, 1, 1, 2, 2, 3), y = 1:6, z = 6:1)
-df_nested <- df %>% nest(data = c(y, z))
-
-test <- head(votes, 500)
-
-# nest the voting record
-vote_records <- votes %>%
-  group_by(Voter.ID) %>%
-  mutate(nvotes = n()) %>%
-  nest()
-
-frequent_voters <- votes %>%
-  group_by(Voter.ID) %>%
-  mutate(nvotes = n()) %>%
-  filter(nvotes >= 5) %>%
-  nest() %>%
-  rename(Record = data)
-
-fv_1 <- votes %>%
-  group_by(Voter.ID) %>%
-  mutate(nvotes = n())
-
-fv_2 <- votes %>%
-  group_by(Voter.ID) %>%
-  mutate(nvotes = n()) %>%
-  nest(Record = -c(Voter.ID,nvotes))
-
-fv_1 <- frequent_voters %>%
-  mutate(N.Votes = Record[[1]]$nvotes[[1]])
-
-# vote_records_1 <- vote_records %>% mutate(filtered = ifelse(data$nvotes > 5, TRUE, FALSE))
-#                                             map(data, ~ filter(., nvotes > 5)))
-
-
-# vote_records_1 <- test %>%
-#   group_by(Voter.ID) %>%
-#   nest() %>%
-#   rename(Record = data)
-# length(vote_records$Record[[3]])
-# vote_records %>% filter(nrow(Record) == 1)
-# vote_records %>% map(~ filter(nrow(.) > 1))
-# vote_records %>% map( ~ .)
-# map(vote_records$Record, ~ ifelse(nrow(.) > 1, print("yes"), ))
-# vote_records %>% mutate(filtered = map(Record, ~ filter(., nrow(.) > 1)))
-# vote_records %>% mutate(multi = ifelse(nrow(Record), TRUE, FALSE))
-
-# map iterates through every column
-
-# compare similarity between voters. Clustering analysis or just percentage of shared votes threshold?
-```
 
