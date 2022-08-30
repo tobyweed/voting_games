@@ -15,76 +15,16 @@ library(combinat)
 library(qgraph)
 library(igraph)
 library(factoextra)
-# library(philentropy) # to compute dice metric
 library(usedist) # to compute dice metric
 library(hopkins)
 library(seriation)
 ```
 
-# Intro
-
-Perhaps the dominant ideological impulse of the internet era is a broad and variously-described campaign for "decentralization." Calls for decentralization spurred the development of the early internet; more recently, they form the driving rhetorical impetus to the blockchain and Web3 movements. Though various definitions [@Hassan2021] [@Dalton1980] [@DLTS] and taxonomies [@Sai2021] [@Buterin2017] [@Siddarth2022] of decentralization have been offered, the notion's ambiguity constitutes a theoretical crux in the academic study of modern, especially digitally-enabled, organizations.
-
-Decentralization is alleged to be beneficial for a variety of reasons. The blockchain community has historically focused on things like security, integrity, and resilience--resistance to attacks and collusion, avoidance of single points of failure, prevention of authoritarianism, etcetera [@Buterin2017]. For this reason, most past studies of decentralization in blockchains have defined decentralization in a technical sense (e.g., network measures on the underlying nodes [@Shahsavari2022]), or with an eye to security (e.g., how many entities it would take to execute a 51% attack [@Srinivasan2017]). These measures are not the focus of this analysis, but a recent DARPA-commissioned report summarizes the general evidence that the Web3 ecosystem has not, thus far, been very successful in achieving these goals [@TOB2022].
-
-At the [Metagovernance Project](https://metagov.org/), we seek to shed light on modern problems of social coordination using the framework of *governance*. From the governance perspective, it can be difficult to define decentralization, except by the absence of a tyrant. 
-
-
-DAOs are attempting to design and implement new systems of governance. They are doing so for various reasons (cite mission statements of different companies & stuff), but the most common theme is a broad and variously-described campaign for "decentralization." Politically, this comes down to expanding enfranchisement: increasing the number of people who can exercise power over the governance process.
-
-The first attempts at DAO governance have proven naive, resulting in heaps of arcane proposals, extreme plutocracy, and so on--ultimately resulting in incredibly low participation rates across blockchains (cite). In order to avoid falling into the same traps as nation-state governments, DAO creators will need to think very carefully about how they design their governance systems.
-
-The hard endpoint of political power in a democracy is voting. This makes voting systems the intuitive place to start for structurally improving the design of the governance process. People have come up with a wide range of proposals for alternative voting systems, including Quadratic Voting, Conviction Voting, Optimistic Voting, etc. etc..
-
-However, these voting systems are very young and highly experimental. Their alleged superiority is argued via fuzzy verbal arguments. As these voting systems are taken into practice, we are bound to be surprised by the way that actual actors in the actual world end up using them--just as the founding fathers were been surprised by the formation of political parties. 
-
-There are a few tools which we can bring to bear to understand the outcomes that different voting arrangements affect in practice. Mention game theory & simulation. The most powerful tool, however, is empirical investigation. As we look around at the governance arrangements which have been made, we can ask: to what extent do people's preferences in different domains tend to align? Can we identify forming coalitions or parties of people who want the same things? Basically, are different governance arrangements pushing people into political parties, in order to get things done? On the other hand, is there a preference-aligned voting coalition which dominates the system? 
-
-This article does not attempt to propose a normative view for what level of coalitionality is desireable. Rather, we propose a method for evaluating the extent to which an existing voting environment displays preference-aligned coalitions, and the distribution of power between what coalitions do exist. 
-
-
-
-At the [Metagovernance Project](https://metagov.org/), we seek to shed light on modern problems of social coordination using the framework of *governance*. From the governance perspective, "decentralization" has much to do with **the distribution of power between individuals.** While power over the underlying infrastructure--the type of power wielded by validators, for example--is an example of this, we ultimately want "substrate-independent" measures of power distribution. The easy, well-defined starting point for this analysis is *voting power*. Voting is far from the whole story of governance, but it is an important source of hard power within a democratic system. 
-
-This article is an effort to explore the problem of decentralization--its motivations, representations, and potential effects--from the perspective of governance. Ultimately, it is part of a push to establish an expressive formal language for researchers grappling with the extremely difficult, increasingly complex, and all-too-salient problems presented by 21st-century collective action.
-
-
 # Data
-
-# The Voting Network
-
-# Decentralization
-## Graph-Based Measures, Ideological Decentralization
-## The Power of Coalitions
-
-# Conclusion
-
-
-# Background and Motivation
-
-Perhaps the dominant ideological impulse of the internet era is a broad and variously-described campaign for "decentralization." Calls for decentralization spurred the development of the early internet; more recently, they form the driving rhetorical impetus to the blockchain and Web3 movements. Though various definitions [@Hassan2021] [@Dalton1980] [@DLTS] and taxonomies [@Sai2021] [@Buterin2017] [@Siddarth2022] of decentralization have been offered, the notion's ambiguity constitutes a major theoretical crux in the academic study of modern, especially digitally-enabled, organizations.
-
-At the [Metagovernance Project](https://metagov.org/), we seek to shed light on modern problems of social coordination using the framework of *governance*. This article is a preliminary effort to explore the problem of decentralization--its motivations, representations, and potential effects--from the perspective of governance. Ultimately, it is part of a push to establish an expressive formal language for researchers grappling with the extremely difficult, increasingly complex, and all-too-salient problems presented by 21st-century collective action.
-
-# The Voting Perspective
-
-Decentralization is alleged to be beneficial for a variety of reasons. The blockchain community has historically focused on things like security, integrity, and resilience--resistance to attacks and collusion, avoidance of single points of failure, prevention of authoritarianism, etcetera [@Buterin2017]. For this reason, most past studies of decentralization in blockchains have defined decentralization in a technical sense (e.g., network measures on the underlying nodes [@Shahsavari2022]), or with an eye to security (e.g., how many entities it would take to execute a 51% attack [@Srinivasan2017]). These measures are not the focus of this analysis, but a recent DARPA-commissioned report summarizes the general evidence that the Web3 ecosystem has not, thus far, been very successful in achieving these goals [@TOB2022].
-
-We're interested in sociopolitical arrangements within a general class organizations, so for us, "decentralization" has much to do with distribution of power between individuals. While power over the underlying infrastructure--the type of power wielded by validators, for example--is an example of this, we ultimately want "substrate-independent" measures of power distribution. The easy, well-defined starting point for this analysis is *voting power*. Voting is far from the whole story of governance, but it is an important source of hard power within a democratic system. Additionally, analyzing voting data could help illuminate less visible governance factors like social influence, agenda-setting power [@Rossiter2021], and ideological or cultural topology.
-
-# Data
-
-Decentralized Autonomous Organizations are a good subject of governance study due to their diversity and openness to experimentation. They also care (a lot) about decentralization and effective governance. For this analysis I used voting data from [Snapshot](https://snapshot.org/#/), a popular off-chain voting platform. In particular, I gathered a dataset of votes from the [Proof-of-Humanity snapshot](https://snapshot.org/#/poh.eth) (see the code used to gather this dataset [here](https://github.com/tobyweed/voting_games/blob/master/voting_data.Rmd)).
 
 ```{r}
 votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number if type is unspecified
 ```
-
-
-**Note:** I chose Proof of Humanity because they have relatively few active voters, and their votes tend to be relatively controversial, while many DAO votes are more or less unanimous. However, voting data could be gathered from any DAO on Snapshot within a couple of minutes using the same code.
-
-
-I chose to focus on the seven most recent proposals with binary voting, for the reason that these have highly-overlapping voter pools. This will make our clustering analysis later on more meaningful. However, one can easily imagine analyzing more proposals.
 
 ```{r clean, include=FALSE}
 # restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
@@ -143,36 +83,15 @@ rownames(vot_tab) <- 1:length(voters)
 ```
 
 ```{r}
-vot_tab
-```
-
-How should we analyze decentralization in this voting system? Traditional political science models of voting power include the [Shapley-Shubik](https://en.wikipedia.org/wiki/Shapley%E2%80%93Shubik_power_index#:~:text=The%20Shapley%E2%80%93Shubik%20power%20index,not%20obvious%20on%20the%20surface.) and [Banzhaf](https://en.wikipedia.org/wiki/Banzhaf_power_index) indices, which both measure (in different ways) the likelihood that a coalition swings the vote in any given way. One simple idea would be to take a look at the distribution of "voting power," variously defined, among different entities within a system.
-
-Of course, this brings up the question of how we'd like to define "entities" in the DAO context. This question is actually more interesting than it might appear at first glance; the analogy with traditional democratic assemblies (e.g. within nation-states) tells us that groups of individuals often self-organize into coalitions which generally operate as a unit. One important and interesting governance question, then, is to what extent do individuals within an organization form discrete coalitions? Posed more holistically, what is the topology of *preferences* within the voting body?
-
-```{r}
 # how many missing values do we have?
 na_counts <- rowSums(is.na(vot_tab))
 table(na_counts)
 mean(na_counts)
 ```
 
-Six voters voted on every proposal, 22 missed at most one, and 37 missed at most two. The average voter in our set missed about two of the seven votes we're looking at. This is not too sparse a dataset (by design), so we'll go ahead and measure the similarity between each voter's voting record. We'd like the distance between two voters to be the sum of the distance between their votes on each proposal, i.e. $d(\vec{x}, \vec{y}) = \sum_i d(x_i,y_i)$. We also might want `NA` votes (abstensions) to be halfway between a "yes" and a "no." This corresponds to using the [Manhattan metric](https://en.wikipedia.org/wiki/Taxicab_geometry) and replacing `NA` values with `1.5`, since the voting options are `1` and `2`.
-
-Dice coefficient:
-$$
-{\displaystyle d(X, Y) = 1 - D(X,Y)
-
-{\frac {2|X\cap Y|}{|X|+|Y|}}}
-$$
-
-$$
-{\displaystyle d(X, Y) = 1 - D(X,Y)}
-$$
+Six voters voted on every proposal, 22 missed at most one, and 37 missed at most two. The average voter in our set missed about two of the seven votes we're looking at. 
 
 ```{r}
-vot_tab <- vot_tab_copy
-
 # OPTION 1 (best?)
 # NAs just aren't considered: (NA, NA, 1), (NA, NA, 1) is 0 distance, (NA, NA, 1), (NA, NA, 2) is 1 distance
 dice_metric <- function(x, y) {
@@ -218,19 +137,8 @@ dev.off()
 ![](votegraph.jpg)
 
 
-It looks like there are at least a couple of pretty densely-connected clusters of similar voters. Down the line, this kind of representation could play a role in a more general analysis of ideological affiliation, which could tell us things about cohesion, polarization, and so on.
-
-**Note 1:** one can easily imagine defining a multilayer network by bringing in data from other DAOs, since addresses often hold voting tokens in multiple DAOs. This would allow a more general analysis of preference topology and voting influence within the broader DAO ecosystem, which could be pretty interesting.
-
-
-**Note 2:** it might also be interesting to quantify the "preference centralization" or "polarization" within our voting graph using graph-based measures of clustering and decentralization, such as closeness centrality, degree centrality, Freeman centralization, local clustering coefficient, global clustering coefficient, etc..
-
-
 
 ## Identifying Coalitions
-Are there groups of voters who tend to vote the same way, or "coalitions," present in our data? If so, how many?
-
-To answer this question, we'll use standard clustering analysis, although one might also try more network-specific [community detection algorithms](https://arxiv.org/pdf/0908.1062.pdf). INSERT NOTE ABOUT NETWORK REPRESENTATION VS METRIC SPACE
 
 We can see visually from our graph that the right answer seems to be that the data *does* present clusters, and that there are basically two, along with a bunch of relatively independent voters. However, since this post is more about methodology than the specific analysis of this data, we'll show how you might interrogate this question quantitatively if you had a more complex or ambiguous dataset. 
 
@@ -238,8 +146,6 @@ We can see visually from our graph that the right answer seems to be that the da
 The usual tool is the [Hopkins statistic](https://en.wikipedia.org/wiki/Hopkins_statistic), defined as:
 
 ${\displaystyle H={\frac {\sum _{i=1}^{m}{u_{i}^{d}}}{\sum _{i=1}^{m}{u_{i}^{d}}+\sum _{i=1}^{m}{w_{i}^{d}}}}\,},$
-
-where 
 
 
 ```{r}
@@ -259,12 +165,9 @@ dissplot(dist_mat)
 ```
 
 
-
-
-
+### Hierarchical Clustering
 
 In order to get a rough power distribution, we can define "coalitions" or "voting blocs" by hierarchically clustering on this graph.
-
 
 ```{r}
 hc <- hclust(dist, method = "average")
@@ -273,8 +176,7 @@ plot(hc, main = "Dendrogram of Voting Preferences", xlab = "", sub = "",
 ```
 
 
-Let's define 5 coalitions, just cause.
-
+### Investigate optimal number of clusters
 
 **Note:** I'm choosing complete linkage clustering and a number of clusters/threshold for voting agreement within coalitions pretty arbitrarily. One can imagine only defining coalitions which agree completely, or which correspond to prior knowledge of actual actors within a system. Nonetheless, I think it's an interesting exercise.
 
@@ -284,13 +186,13 @@ fviz_nbclust(vot_tab, hcut, method = "wss", diss = dist, k.max = 24)
 fviz_nbclust(vot_tab, hcut, method = "gap_stat", diss = dist, k.max = 24)
 ```
 
+### Assign Blocs
+
 ```{r}
 # Cluster the voters into voting "blocs"
 # hc_clusters <- cutree(hc, h = 0.88)
 hc_clusters <- cutree(hc, 5)
 ```
-
-
 
 ```{r blocs, include=FALSE}
 v2 <- v1 %>%
@@ -301,18 +203,6 @@ for(i in 1:length(voters)) {
   v2$Bloc[rows] <- hc_clusters[i]
 }
 ```
-
-
-```{r}
-hc_clusters
-```
-
-
-**Note:** It'd be fun to redraw the voting graph, coloring nodes by the clusters they belong to and maybe adjusting their size by their voting weight.
-
-
-So, given these voting blocs, what's the distribution of voting tokens?
-
 
 ```{r bloc1, include=FALSE}
 # count each Bloc's voting weight, using each voter's max weight
@@ -341,21 +231,8 @@ voter_weights_blocs <- within(voter_weights_blocs, Factor <- ave(as.character(We
 order <- reorder(voter_weights_blocs$Factor, sort(as.numeric(voter_weights_blocs$Factor), decreasing = TRUE))
 levels(order) <- sort(as.numeric(levels(order)))
 voter_weights_blocs$order <- factor(voter_weights_blocs$Weight, levels = unique(order))
-
-voter_weights_blocs %>%
-  ggplot(aes(x = order, y = Weight, fill = factor(Bloc))) +
-  geom_col(color = "black") +
-  # theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
-  ggtitle("Individual Voters by Weight") +
-  xlab("Voter Weight") +
-  ylab("Total Weight") + 
-  labs(fill = "Coalition") +
-  scale_fill_manual(values=c("#ff6c67",
-                             "#a3a600",
-                             "#00c377",
-                             "#00b1fc",
-                             "#f95dfa"))
 ```
+
 ```{r}
 voter_weights_blocs %>%
   ggplot(aes(x = order, y = Weight/sum(Weight), fill = factor(Bloc))) +
@@ -377,6 +254,8 @@ voter_weights_blocs %>%
 
 
 ```{r}
+# experimentation with factors & shit to get the plot above set up right:
+
 order <- reorder(voter_weights_blocs$Factor, sort(as.numeric(voter_weights_blocs$Factor), decreasing = TRUE))
 
 factor(voter_weights_blocs$Factor, levels = order(unique(as.numeric(voter_weights_blocs$Factor))))
@@ -387,8 +266,11 @@ levels(order) <- sort(as.numeric(levels(order)))
 sort(unique(as.numeric(voter_weights_blocs$Factor)))
 ```
 
-
+## Covoting Netorks
+### Covoting networks for DAO data
 ```{r}
+# covoting network, log-scaled node sizing and coloring by Bloc
+
 blocs <- list(which(hc_clusters == 1), 
               which(hc_clusters == 2),
               which(hc_clusters == 3),
@@ -417,7 +299,8 @@ g <- qgraph(1 - dist_mat,
             )
 ```
 ```{r}
-# Grey version
+# Grey, non-node-scaled version of covoting network
+
 g <- qgraph(1 - dist_mat, 
             layout='spring', 
             repulsion=0.8,
@@ -434,7 +317,7 @@ g <- qgraph(1 - dist_mat,
             )
 ```
 
-
+### Covoting networks for senate data
 ```{r}
 senate_votes <- read.csv("senate114_2.csv")
 # senate_votes <- read.csv("senate101_1.csv")
@@ -470,6 +353,7 @@ g <- qgraph(1 - sen_dist_mat,
             )
 ```
 
+## Analyze Bloc Power
 
 ```{r bloc1, include=FALSE}
 bloc_dist <- v2 %>%
@@ -500,9 +384,8 @@ bloc_dist %>% ggplot(aes(x = Bloc, y = Bloc.Weight, fill = factor(Bloc))) +
                              "#f95dfa"))
 ```
 
-
+### Gini
 We can measure the "voting token wealth inequality" by Gini coefficient:
-
 
 ```{r gini, include=FALSE}
 # compute the gini coefficient of a given distribution
@@ -528,8 +411,7 @@ gini(bloc_dist$Bloc.Weight)
 ```
 
 
-or the voting power distribution by Shapley-Shubik index:
-
+### Shapley-Shubik Index
 
 ```{r ssi, include=FALSE}
 # compute Shapley-Shubik indices for a given distribution 
@@ -580,11 +462,6 @@ bloc_dist %>% ggplot(aes(x = Bloc, y = SSI, fill = factor(Bloc))) +
                              "#f95dfa"))
 ```
 
-# Conclusion
-
-This is obviously very much a work-in-progress, and much of the "analysis" is completely arbitrary. That said, I think it shows that there's some interesting insight to be drawn *just* from analyzing voting data in DAOs. The notes throughout draw attention to directions one could go, either by including more diverse data, considering different representations, engaging in more rigorous justification, or probing the analysis with different visualizations and metrics.
-
-In terms of the future direction of the decentralization metrics project, I do think that we'll get a lot of value by looking at more holistic data than just voting records. That being said, I think that the voting perspective has the advantage of being really easy to analyze, and could shed light on more subtle dynamics (and might inspire interesting formal DAO representations, which I guess is what we're really after). At the very least I think another week or two here could produce a solid blog post.
 
 
 # References
