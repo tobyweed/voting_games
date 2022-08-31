@@ -1,0 +1,52 @@
+---
+title: "covoting_network"
+output: html_document
+date: '2022-08-31'
+---
+```{r setup}
+
+library(tidyverse)
+# library(combinat)
+library(qgraph)
+# library(igraph)
+# library(factoextra)
+# library(usedist) # to compute dice metric
+```
+
+
+```{r}
+votes <- read.csv("votes_clean.csv", colClasses = c("Voter.ID" = "character", "Proposal.ID" = "character")) # IDs will be read as hex numbers if type is unspecified
+vot_mat <- read.csv("vot_mat.csv")[,2:8] # chop off first value (just a label)
+```
+
+```{r}
+# NAs just aren't considered in denominator: (NA, NA, 1), (NA, NA, 1) is 0 distance, (NA, NA, 1), (NA, NA, 2) is 1 distance, (NA,NA,1), (1, NA, NA) is 1 distance
+dice_metric <- function(x, y) {
+  n_votes <- c(length(which(!is.na(x))), length(which(!is.na(y)))) 
+  1 - 2*length(which(x == y))/sum(n_votes) # 1 - dice coefficient (to make it a metric)
+                                         # Dice coeff: 2*| X intersect Y | / |X| + |Y|
+}
+
+dist <- dist_make(vot_mat, dice_metric)
+
+dist_mat <- as.matrix(dist)
+```
+
+
+```{r}
+# Grey, non-node-scaled version of covoting network
+g <- qgraph(1 - dist_mat, 
+            layout='spring', 
+            repulsion=0.8,
+            # nodes:
+            vsize = 1,
+            color = "grey",
+            labels = FALSE,
+            # edges:
+            edge.color = "#565656",
+            colFactor = 3,
+            # styling:
+            palette = "ggplot2",
+            aspect = TRUE
+            )
+```

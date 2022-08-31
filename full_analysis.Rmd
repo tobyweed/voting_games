@@ -8,6 +8,8 @@ bibliography: refs.bib
 csl: ieee.csl
 ---
 
+This document is has all of the code used to produce the analysis in the Medium article: https://medium.com/metagov/how-to-think-about-voting-systems-2494560c4c82
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -93,10 +95,10 @@ Six voters voted on every proposal, 22 missed at most one, and 37 missed at most
 
 ```{r}
 # OPTION 1 (best?)
-# NAs just aren't considered: (NA, NA, 1), (NA, NA, 1) is 0 distance, (NA, NA, 1), (NA, NA, 2) is 1 distance
+# NAs just aren't considered in denominator: (NA, NA, 1), (NA, NA, 1) is 0 distance, (NA, NA, 1), (NA, NA, 2) is 1 distance
 dice_metric <- function(x, y) {
   n_votes <- c(length(which(!is.na(x))), length(which(!is.na(y)))) 
-  1 - length(which(x == y))/sum(n_votes) # 1 - dice coefficient (to make it a metric)
+  1 - 2*length(which(x == y))/sum(n_votes) # 1 - dice coefficient (to make it a metric)
                                          # Dice coeff: 2*| X intersect Y | / |X| + |Y|
 }
 
@@ -460,6 +462,15 @@ bloc_dist %>% ggplot(aes(x = Bloc, y = SSI, fill = factor(Bloc))) +
                              "#00c377",
                              "#00b1fc",
                              "#f95dfa"))
+```
+
+
+### Export data for other use
+
+```{r}
+write.csv(vot_mat, "vot_mat.csv") # matrix of voting records
+write.csv(v2, "votes_clean.csv") # filtered for recency & has e.g. max weight attribute
+write.csv(dist_mat, "dist.csv")
 ```
 
 

@@ -1,0 +1,83 @@
+---
+title: "clean"
+output: html_document
+date: '2022-08-31'
+---
+```{r}
+library(tidyverse)
+```
+
+# Clean the PoH Voting Data
+
+```{r}
+votes <- read.csv("votes.csv", colClasses = c("Voter.ID" = "character")) # Voter.ID will be read as a hex number if type is unspecified
+```
+
+```{r clean, include=FALSE}
+# restrict our attention to proposals not made before 0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8
+start_time <- votes %>%
+  filter(Proposal.ID == "0x824953e27fca1b0dbc0242b82750afbd2efb6b60621a6383674653bc826ef9c8") %>%
+  arrange(Time.Created) %>%
+  head(1)
+ 
+start_time <- start_time$Time.Created
+votes_clean <- votes %>%
+  filter(Time.Created >= start_time)
+# count number of votes cast per voter
+votes_clean <- votes_clean %>%
+  group_by(Voter.ID) %>%
+  mutate(N.Votes = n())
+length(unique(votes_clean$Voter.ID)) # we have 658  individual voters after this time
+length(unique(votes_clean$Proposal.ID)) # and 7 proposals
+# and 69 voters who cast at least 4 votes
+votes_clean %>%
+  filter(N.Votes >= 4) %>%
+  select(Voter.ID) %>%
+  unique() %>%
+  nrow()
+# lets focus on these repeat voters
+votes_clean <- votes_clean %>%
+  filter(N.Votes >= 4) 
+```
+
+This leaves us with a very manageable set of 69 voters and 7 proposals.
+
+Organize our data into a table with individual voters as the rows, proposals as the columns, and cells corresponding to voters' choices:
+
+```{r vot_tab, include=FALSE}
+# make a table with rows=voters and cols=proposals, with cell values=how they voted.
+proposals <- unique(votes_clean$Proposal.ID)
+voters <- unique(votes_clean$Voter.ID)
+vot_tab <- data.frame(matrix(nrow = length(voters), ncol= length(proposals)))
+colnames(vot_tab) <- proposals
+rownames(vot_tab) <- voters
+# Note: this code is highly inefficient and could be made much faster.
+for(i in 1:nrow(vot_tab)) {
+  for(j in 1:ncol(vot_tab)) {
+    row <- filter(votes_clean, Voter.ID == voters[i], Proposal.ID == proposals[j])
+    if(nrow(row) != 0) {
+      vot_tab[i,j] <- row$Choice
+    }
+  }
+}
+# make the cols a little nicer
+colnames(vot_tab) <- 1:length(proposals)
+rownames(vot_tab) <- 1:length(voters)
+
+vot_mat <- data.matrix(vot_tab, rownames.force = NA)
+```
+
+```{r}
+# how many missing values do we have?
+na_counts <- rowSums(is.na(vot_tab))
+table(na_counts)
+mean(na_counts)
+```
+
+Six voters voted on every proposal, 22 missed at most one, and 37 missed at most two. The average voter in our set missed about two of the seven votes we're looking at. 
+
+```{r}
+write.csv(vot_mat, "vot_mat.csv") # matrix of voting records
+write.csv(votes_clean, "votes_clean.csv") # filtered for recency
+```
+

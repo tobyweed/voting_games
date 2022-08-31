@@ -1,0 +1,49 @@
+---
+title: "influence"
+output: html_document
+date: '2022-08-30'
+---
+
+```{r}
+library(tidyverse)
+library(ggpubr) # for pearson cor
+```
+
+```{r}
+votes <- read.csv("votes_clean.csv", colClasses = c("Voter.ID" = "character", "Proposal.ID" = "character")) # IDs will be read as hex numbers if type is unspecified
+vot_mat <- read.csv("vot_mat.csv")[,2:8] # chop off first value (just a label)
+dist_dice <- read.csv("dist.csv")
+```
+
+```{r}
+
+pearson <- function(x, y) {
+  cor(x, y, method = "pearson")
+}
+
+cor(vot_mat[2,], vot_mat[2,], method = "pearson")
+
+dist_prsn <- dist_make(vot_mat, pearson)
+
+dist_prsn_mat <- as.matrix(dist_prsn)
+```
+
+
+```{r}
+# Grey, non-node-scaled version of covoting network
+g <- qgraph(1 - dist_mat, 
+            layout='spring', 
+            repulsion=0.8,
+            # nodes:
+            vsize = 1,
+            color = "grey",
+            labels = FALSE,
+            # edges:
+            edge.color = "#565656",
+            colFactor = 3,
+            # styling:
+            palette = "ggplot2",
+            aspect = TRUE
+            )
+```
+
