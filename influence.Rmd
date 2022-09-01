@@ -11,21 +11,32 @@ library(ggpubr) # for pearson cor
 
 ```{r}
 votes <- read.csv("votes_clean.csv", colClasses = c("Voter.ID" = "character", "Proposal.ID" = "character")) # IDs will be read as hex numbers if type is unspecified
-vot_mat <- read.csv("vot_mat.csv")[,2:8] # chop off first value (just a label)
-dist_dice <- read.csv("dist.csv")
+vot_mat <- read.csv("vot_mat.csv")[,2:8]
+dist_dice <- read.csv("dist.csv")[,2:70]
 ```
 
 ```{r}
+trans <- as.matrix(transpose(vot_mat))
 
 pearson <- function(x, y) {
-  cor(x, y, method = "pearson")
+  cor(x, y, use = "pairwise.complete.obs",  method = "pearson") # see https://thomasleeper.com/Rcourse/Tutorials/NAhandling.html                                                                 #   for more on the `use` parameter
 }
 
-cor(vot_mat[2,], vot_mat[2,], method = "pearson")
+cor(as.numeric(vot_mat[1,]), as.numeric(vot_mat[1,]), use = "pairwise.complete.obs", method = "pearson")
 
 dist_prsn <- dist_make(vot_mat, pearson)
 
 dist_prsn_mat <- as.matrix(dist_prsn)
+```
+
+```{r}
+x <- c(1, 1, 1, NA, 1, 1)
+y <- c(3, 2, 4, 5, 1, 3, 4)
+z <- c(NA, 2, 3, 5, 4, 3, 4)
+a <- as.numeric(vot_mat[1,])
+b <- as.numeric(vot_mat[2,])
+
+cor(a,b, use = "pairwise.complete.obs", method = "pearson")
 ```
 
 
@@ -46,4 +57,53 @@ g <- qgraph(1 - dist_mat,
             aspect = TRUE
             )
 ```
+
+
+```{r}
+weights <- c()
+# calculate centrality
+for(i in 1:69) {
+  weights <- append(weights, sum(dist_dice[,i]))
+}
+
+which.max(weights)
+```
+
+
+Check it on census data
+```{r}
+# alphabetical list of senators at: https://www.senate.gov/legislative/LIS/roll_call_votes/vote1142/vote_114_2_00144.htm
+# see https://pages.ucsd.edu/~egartzke/data/affinity_codebook_03102006.pdf for how Affinities of Nations was calculated; try adopting that metric
+senate_votes <- read.csv("senate114_2.csv")
+# senate_votes <- read.csv("senate101_1.csv")
+sen_vot_mat <- data.matrix(senate_votes, rownames.force = NA)
+
+dice_metric <- function(x, y) {
+  n_votes <- c(length(which(!is.na(x))), length(which(!is.na(y)))) 
+  -1 + 4*length(which(x == y))/sum(n_votes) # 1 - dice coefficient (to make it a metric)
+                                         # Dice coeff: 2*| X intersect Y | / |X| + |Y|
+}
+
+dist <- dist_make(vot_mat, dice_metric)
+
+dist_mat <- as.matrix(dist)
+
+sen_dist <- dist_make(sen_vot_mat, dice_metric)
+sen_dist_mat <- as.matrix(sen_dist)
+
+weights <- c()
+# calculate centrality
+for(i in 1:100) {
+  weights <- append(weights, sum(abs(sen_dist_mat[,i])))
+}
+
+which.max(weights)
+
+wdf <- data.frame(weight = weights, ID = 1:100)
+wdf %>%
+  arrange(weight) %>%
+  filter(ID == 24)
+
+```
+
 
